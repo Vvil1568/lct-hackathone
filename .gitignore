@@ -1,1 +1,6 @@
 .env
+.idea/
+test/
+__pycache__/
+*.pyc
+*.pyo
