@@ -18,7 +18,7 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=rpc://redis:6379/0
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMMA_API_KEY=${GEMMA_API_KEY}
   worker:
     build: .
     command: celery -A optimizer_service.worker.celery_app worker --loglevel=info
@@ -29,4 +29,4 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=rpc://redis:6379/0
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMMA_API_KEY=${GEMMA_API_KEY}
