@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    command: uvicorn optimizer_service.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./optimizer_service:/app/optimizer_service
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=rpc://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+  worker:
+    build: .
+    command: celery -A optimizer_service.worker.celery_app worker --loglevel=info
+    volumes:
+      - ./optimizer_service:/app/optimizer_service
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=rpc://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
