@@ -1,56 +1,109 @@
 import json
-import re
+from typing import List
+
+import sqlglot
+from sqlglot import exp
+
 from optimizer_service.data_analyzer.trino_connector import TrinoConnector
+from optimizer_service.models.schemas import ProfiledQuery, GlobalAnalysisReport, TaskRequest
+from .detectors.base_detector import DetectionResult
+from .detectors.join_detector import JoinPatternDetector
 
 
 class AnalysisModule:
-    """
-    Модуль для выполнения аналитических запросов к Trino.
-    """
-
     def __init__(self, connector: TrinoConnector):
         self._connector = connector
+        self._detectors = [
+            JoinPatternDetector(),
+        ]
 
-    def run_explain(self, sql_query: str) -> dict:
-        """
-        Выполняет 'EXPLAIN (FORMAT JSON)' для заданного SQL запроса.
-        """
-        print(f"Выполняю EXPLAIN для запроса: {sql_query[:100]}...")
+    def perform_global_analysis(self, task_data: TaskRequest) -> GlobalAnalysisReport:
+        print("Начинаю глобальный анализ с использованием детекторов...")
+
+        profiled_queries = self._profile_all_queries(task_data)
+        top_cost_queries = self._prioritize_queries(profiled_queries)
+
+        all_detections: List[DetectionResult] = []
+        for detector in self._detectors:
+            all_detections.extend(detector.run(top_cost_queries))
+
+        sorted_detections = sorted(all_detections, key=lambda d: d.priority, reverse=True)
+
+        analysis_summary = self._generate_analysis_summary(sorted_detections, top_cost_queries)
+
+        return GlobalAnalysisReport(
+            top_cost_queries=top_cost_queries,
+            analysis_summary=analysis_summary
+        )
+
+    def _generate_analysis_summary(self, detections: List[DetectionResult], top_queries) -> str:
+        if not top_queries:
+            return "Не удалось проанализировать запросы."
+
+        if not detections:
+            return ("Глобальный анализ не выявил очевидных паттернов. "
+                    "Рекомендуется поочередная оптимизация самого дорогого запроса.")
+
+        highest_priority_problem = detections[0]
+        return highest_priority_problem.message
+
+    def _profile_all_queries(self, task_data: TaskRequest) -> List[ProfiledQuery]:
+        """Собирает EXPLAIN и метаданные для каждого запроса."""
+        results = []
+        with self._connector.connect() as conn:
+            cur = conn.cursor()
+            for query in task_data.queries:
+                try:
+                    print(f"Профилирую запрос: {query.queryid}")
+                    explain_plan = self._run_explain_with_cursor(cur, query.query)
+
+                    parsed_sql = sqlglot.parse_one(query.query, read="trino")
+                    tables = []
+                    for table in parsed_sql.find_all(exp.Table):
+                        table.set('alias', None)
+                        tables.append(table.sql())
+                    print(tables)
+                    results.append(
+                        ProfiledQuery(
+                            queryid=query.queryid,
+                            sql=query.query,
+                            run_quantity=query.runquantity,
+                            execution_time=query.executiontime,
+                            explain_plan=explain_plan,
+                            tables=tables
+                        )
+                    )
+                except Exception as e:
+                    print(f"Не удалось спрофилировать запрос {query.queryid}. Ошибка: {e}. Пропускаю.")
+        return results
+
+    def _prioritize_queries(self, queries: List[ProfiledQuery], top_n: int = 5) -> List[ProfiledQuery]:
+        """Вычисляет 'стоимость' и возвращает самые дорогие запросы."""
+        for query in queries:
+            query.cost = query.run_quantity * query.execution_time
+
+        sorted_queries = sorted(queries, key=lambda q: q.cost, reverse=True)
+        return sorted_queries[:top_n]
+
+    def _run_explain_with_cursor(self, cursor, sql_query: str) -> dict:
+        """Выполняет EXPLAIN, используя существующий курсор. Максимально отказоустойчивая версия."""
         if sql_query.strip().endswith(';'):
             sql_query = sql_query.strip()[:-1]
 
-        explain_query = f"EXPLAIN (FORMAT JSON) {sql_query}"
-
         try:
-            with self._connector.connect() as conn:
-                cur = conn.cursor()
-                cur.execute(explain_query)
-                result = cur.fetchone()
-
-                if result and result[0]:
-                    return json.loads(result[0])
-                else:
-                    raise ValueError("EXPLAIN не вернул результат.")
+            explain_query = f"EXPLAIN (FORMAT JSON) {sql_query}"
+            cursor.execute(explain_query)
+            result = cursor.fetchone()
         except Exception as e:
-            print(f"Ошибка при выполнении EXPLAIN: {e}")
-            raise
+            raise ValueError(f"Выполнение EXPLAIN провалилось с ошибкой БД: {e}")
 
-    def get_table_stats(self, table_name: str) -> list:
-        """
-        Выполняет 'SHOW STATS FOR table' и возвращает статистику.
-        """
-        print(f"Получаю статистику для таблицы: {table_name}...")
-        stats_query = f"SHOW STATS FOR {table_name}"
-
-        try:
-            with self._connector.connect() as conn:
-                cur = conn.cursor()
-                cur.execute(stats_query)
-                stats = cur.fetchall()
-                return stats
-        except Exception as e:
-            print(f"Ошибка при получении статистики для таблицы {table_name}: {e}")
-            raise
+        if result and isinstance(result, (list, tuple)) and len(result) > 0 and isinstance(result[0], str):
+            try:
+                return json.loads(result[0])
+            except json.JSONDecodeError:
+                raise ValueError(f"EXPLAIN вернул строку, но это невалидный JSON: {result[0][:200]}...")
+        else:
+            raise ValueError(f"EXPLAIN не вернул ожидаемую JSON-строку. Получено (тип: {type(result)}): {result}")
 
     def validate_sql_list(self, ddl_statements: list, migration_statements: list, query_statements: list) -> (
     bool, str, str):
@@ -70,15 +123,15 @@ class AnalysisModule:
                 return (False, "Не найден CREATE TABLE в DDL ответа LLM", "")
 
             try:
-                columns_part = re.search(r'\((.*)\) WITH', create_table_sql, re.DOTALL | re.IGNORECASE).group(1)
-                column_names = [line.strip().split()[0] for line in columns_part.strip().split(',')]
-            except Exception:
-                return (False, "Не удалось распарсить колонки из CREATE TABLE", create_table_sql)
+                create_table_ast = sqlglot.parse_one(create_table_sql, read="trino")
+                column_defs = create_table_ast.this.expressions
+                column_names = [col_def.this.sql() for col_def in column_defs]
+            except Exception as e:
+                return (False, f"AST-парсер не смог извлечь колонки из DDL: {e}", create_table_sql)
 
-            match = re.search(r"CREATE TABLE\s+([^\s\(]+)", create_table_sql, re.IGNORECASE)
-            if not match:
+            new_table_name = sqlglot.parse_one(create_table_sql, read="trino").this.this.sql()
+            if not new_table_name:
                 return (False, "Не удалось извлечь имя новой таблицы из DDL", create_table_sql)
-            new_table_name = match.group(1)
 
             migration_sql = migration_statements[0]["statement"]
             select_part_index = migration_sql.upper().find("SELECT")
@@ -105,6 +158,7 @@ class AnalysisModule:
             explain_query = f"EXPLAIN {validation_query}"
 
             print(f"Выполняю EXPLAIN для симуляции...")
+            print(f"EXPLAIN: {explain_query}")
             with self._connector.connect() as conn:
                 cur = conn.cursor()
                 cur.execute(explain_query)

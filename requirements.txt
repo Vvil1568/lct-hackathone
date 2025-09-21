@@ -5,3 +5,4 @@ redis
 pydantic
 pydantic-settings
 trino
+sqlglot

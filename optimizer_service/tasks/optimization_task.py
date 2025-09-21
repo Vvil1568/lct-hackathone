@@ -6,29 +6,19 @@ from optimizer_service.agent.optimization_agent import OptimizationAgent
 from optimizer_service.llm.provider import llm_provider
 
 
+analyzer_instance = AnalysisModule(connector=None)
+agent_instance = OptimizationAgent(llm_provider=llm_provider, analyzer=analyzer_instance)
+
 @celery_app.task(bind=True)
 def run_optimization_task(self, task_data: dict):
-    print(f"Получена задача {self.request.id}. Полный цикл обработки.")
+    print(f"Получена задача {self.request.id}. Полный глобальный цикл.")
     task_request_model = TaskRequest(**task_data)
 
     try:
         connector = TrinoConnector(jdbc_url=task_request_model.url)
-        analyzer = AnalysisModule(connector=connector)
-        agent = OptimizationAgent(llm_provider=llm_provider, analyzer=analyzer)
+        agent_instance.analyzer._connector = connector
 
-        if not task_request_model.queries:
-            raise ValueError("Список запросов (queries) пуст.")
-
-        query_to_analyze = task_request_model.queries[0]
-
-        print(f"Собираю EXPLAIN для queryid {query_to_analyze.queryid}...")
-        explain_plan = analyzer.run_explain(query_to_analyze.query)
-        print("EXPLAIN получен.")
-
-        final_result = agent.run_analysis_and_generation(
-            task_data=task_request_model,
-            explain_plan=explain_plan
-        )
+        final_result = agent_instance.run_global_optimization(task_data=task_request_model)
 
         print(f"Задача {self.request.id} полностью и успешно обработана.")
         return final_result

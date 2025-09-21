@@ -1,8 +1,9 @@
-from optimizer_service.models.schemas import TaskRequest
+import time
+import sqlglot
+from optimizer_service.models.schemas import TaskRequest, GlobalAnalysisReport
 from optimizer_service.llm.provider import LLMProvider
-from optimizer_service.llm.prompts import MEGA_PROMPT_V1_TEMPLATE
+from optimizer_service.llm.prompts import MEGA_PROMPT_V2_TEMPLATE
 from optimizer_service.data_analyzer.analysis_module import AnalysisModule
-import json
 
 MAX_CORRECTION_ATTEMPTS = 2
 
@@ -24,23 +25,37 @@ CORRECTION_PROMPT_TEMPLATE = """
 Твой ответ должен содержать ТОЛЬКО JSON-объект и ничего больше.
 """
 
-
 class OptimizationAgent:
     def __init__(self, llm_provider: LLMProvider, analyzer: AnalysisModule):
         self.llm_provider = llm_provider
         self.analyzer = analyzer
 
-    def run_analysis_and_generation(self, task_data: TaskRequest, explain_plan: dict) -> dict:
-        print("Агент начал полный цикл: Генерация -> Валидация -> Исправление.")
+    def run_global_optimization(self, task_data: TaskRequest) -> dict:
+        """
+        Запускает полный пайплайн: Глобальный анализ -> Генерация -> Валидация.
+        """
+        print("Агент: Начинаю глобальную оптимизацию...")
 
-        initial_prompt = self._build_prompt(task_data, explain_plan)
+        analysis_report = self.analyzer.perform_global_analysis(task_data)
+
+        if not analysis_report.top_cost_queries:
+            return {"error": analysis_report.analysis_summary}
+
+        initial_prompt = self._build_global_prompt(analysis_report, task_data)
         current_prompt = initial_prompt
 
         for attempt in range(MAX_CORRECTION_ATTEMPTS + 1):
             print(f"--- Попытка генерации #{attempt + 1} ---")
+            print(current_prompt)
+            if attempt > 0:
+                delay = 5 * attempt
+                print(f"Делаю паузу в {delay} сек. перед повторной попыткой...")
+                time.sleep(delay)
 
             try:
                 llm_response = self.llm_provider.get_completion(current_prompt)
+                print(f"LLM Response: {llm_response}")
+
                 is_valid, error_msg, failing_sql = self.analyzer.validate_sql_list(
                     ddl_statements=llm_response.get("ddl", []),
                     migration_statements=llm_response.get("migrations", []),
@@ -65,18 +80,47 @@ class OptimizationAgent:
 
         raise Exception("Не удалось сгенерировать валидный SQL после нескольких попыток.")
 
-    def _build_prompt(self, task_data: TaskRequest, explain_plan: dict) -> str:
-        ddl_context = "\n".join([ddl.statement for ddl in task_data.ddl])
-        if not task_data.queries:
-            raise ValueError("Список запросов (queries) пуст.")
+    def _build_global_prompt(self, report: GlobalAnalysisReport, task_data: TaskRequest) -> str:
+        """Собирает отчет и контекст в финальный "стратегический" промпт."""
 
-        query_to_analyze = task_data.queries[0]
-        explain_plan_str = json.dumps(explain_plan, indent=2)
+        top_queries_context_list = []
+        for i, q in enumerate(report.top_cost_queries):
+            context = (
+                f"{i + 1}. Query ID: {q.queryid}\n"
+                f"   Cost: {int(q.cost)}\n"
+                f"   SQL: {q.sql}"
+            )
+            top_queries_context_list.append(context)
+        top_queries_context = "\n---\n".join(top_queries_context_list)
 
-        return MEGA_PROMPT_V1_TEMPLATE.format(
+        relevant_tables = set()
+        for q in report.top_cost_queries:
+            tables_in_query = q.tables
+            print(tables_in_query)
+            for table in tables_in_query:
+                relevant_tables.add(table)
+        print(relevant_tables)
+        ddl_context = ""
+        all_ddl_map = {self._extract_table_name_from_ddl(ddl.statement): ddl.statement for ddl in task_data.ddl}
+        print(all_ddl_map)
+        for table_name in relevant_tables:
+            if table_name in all_ddl_map:
+                ddl_context += all_ddl_map[table_name] + "\n"
+
+        highest_cost_query_id = report.top_cost_queries[0].queryid
+
+        return MEGA_PROMPT_V2_TEMPLATE.format(
+            analysis_summary=report.analysis_summary,
+            top_n=len(report.top_cost_queries),
+            top_queries_context=top_queries_context,
             ddl_context=ddl_context,
-            sql_query=query_to_analyze.query,
-            query_id=query_to_analyze.queryid,
-            run_quantity=query_to_analyze.runquantity,
-            explain_plan=explain_plan_str
+            highest_cost_query_id=highest_cost_query_id
         )
+
+    def _extract_table_name_from_ddl(self, ddl: str) -> str:
+        """Надежная функция для извлечения имени таблицы из CREATE TABLE с помощью AST."""
+        try:
+            parsed = sqlglot.parse_one(ddl, read="trino")
+            return parsed.this.this.sql()
+        except Exception:
+            return ""
