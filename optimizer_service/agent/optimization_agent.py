@@ -101,7 +101,10 @@ class OptimizationAgent:
                 relevant_tables.add(table)
         print(relevant_tables)
         ddl_context = ""
-        all_ddl_map = {self._extract_table_name_from_ddl(ddl.statement): ddl.statement for ddl in task_data.ddl}
+        try:
+            all_ddl_map = {self._extract_table_name_from_ddl(ddl.statement): ddl.statement for ddl in task_data.ddl}
+        except Exception:
+            all_ddl_map = {}
         print(all_ddl_map)
         for table_name in relevant_tables:
             if table_name in all_ddl_map:

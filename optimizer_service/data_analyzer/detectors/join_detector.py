@@ -1,12 +1,12 @@
 from collections import Counter
 from itertools import combinations
-from typing import List
+from typing import List, Dict
 from .base_detector import BasePatternDetector, DetectionResult
 from optimizer_service.models.schemas import ProfiledQuery
 
 
 class JoinPatternDetector(BasePatternDetector):
-    def run(self, queries: List[ProfiledQuery]) -> List[DetectionResult]:
+    def run(self, queries: List[ProfiledQuery], ddl_map: Dict[str, str]) -> List[DetectionResult]:
         join_pairs = Counter()
         for query in queries:
             pairs = combinations(sorted(query.tables), 2)

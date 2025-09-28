@@ -1,0 +1,34 @@
+from typing import List, Dict
+import sqlglot
+from .base_detector import BasePatternDetector, DetectionResult
+from optimizer_service.models.schemas import ProfiledQuery
+
+class SelectStarDetector(BasePatternDetector):
+    def run(self, queries: List[ProfiledQuery], ddl_map: Dict[str, str]) -> List[DetectionResult]:
+        detections = []
+        for query in queries:
+            try:
+                parsed = sqlglot.parse_one(query.sql, read="trino")
+                if any(isinstance(sel, sqlglot.exp.Star) for sel in parsed.find(sqlglot.exp.Select).expressions):
+                    tables_in_query = [t.sql() for t in parsed.find_all(sqlglot.exp.Table)]
+                    for table_name in tables_in_query:
+                        if table_name in ddl_map:
+                            ddl = ddl_map[table_name]
+                            ddl_ast = sqlglot.parse_one(ddl, read="trino")
+                            num_columns = len(ddl_ast.this.expressions)
+                            if num_columns > 20:
+                                message = (
+                                    f"В запросе (ID: {query.queryid}) используется `SELECT *` для чтения из широкой "
+                                    f"таблицы '{table_name}' ({num_columns} колонок). Это приводит к избыточному чтению данных с диска. "
+                                    f"Стратегическая рекомендация: Переписать запрос, явно перечислив только необходимые колонки."
+                                )
+                                detections.append(DetectionResult(
+                                    pattern_name="Select Star on Wide Table",
+                                    message=message,
+                                    priority=5,
+                                    queries=[query]
+                                ))
+                                break
+            except Exception:
+                continue
+        return detections

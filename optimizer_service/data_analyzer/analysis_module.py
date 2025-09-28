@@ -7,7 +7,11 @@ from sqlglot import exp
 from optimizer_service.data_analyzer.trino_connector import TrinoConnector
 from optimizer_service.models.schemas import ProfiledQuery, GlobalAnalysisReport, TaskRequest
 from .detectors.base_detector import DetectionResult
+from .detectors.cross_join_detector import CrossJoinDetector
+from .detectors.inefficient_agg_detector import InefficientAggregationDetector
 from .detectors.join_detector import JoinPatternDetector
+from .detectors.partitioning_detector import PartitioningCandidateDetector
+from .detectors.select_star_detector import SelectStarDetector
 
 
 class AnalysisModule:
@@ -15,6 +19,10 @@ class AnalysisModule:
         self._connector = connector
         self._detectors = [
             JoinPatternDetector(),
+            PartitioningCandidateDetector(),
+            CrossJoinDetector(),
+            InefficientAggregationDetector(),
+            SelectStarDetector(),
         ]
 
     def perform_global_analysis(self, task_data: TaskRequest) -> GlobalAnalysisReport:
@@ -23,9 +31,11 @@ class AnalysisModule:
         profiled_queries = self._profile_all_queries(task_data)
         top_cost_queries = self._prioritize_queries(profiled_queries)
 
+        ddl_map = {sqlglot.parse_one(ddl.statement).this.this.sql(): ddl.statement for ddl in task_data.ddl}
+
         all_detections: List[DetectionResult] = []
         for detector in self._detectors:
-            all_detections.extend(detector.run(top_cost_queries))
+            all_detections.extend(detector.run(top_cost_queries, ddl_map))
 
         sorted_detections = sorted(all_detections, key=lambda d: d.priority, reverse=True)
 
