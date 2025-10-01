@@ -4,11 +4,12 @@ from optimizer_service.models.schemas import ProfiledQuery
 
 class DetectionResult:
     """Структура для хранения результатов работы детектора."""
-    def __init__(self, pattern_name: str, message: str, priority: int, queries: List[ProfiledQuery]):
+    def __init__(self, pattern_name: str, message: str, priority: int, queries: List[ProfiledQuery], detector_name: str):
         self.pattern_name = pattern_name
         self.message = message
         self.priority = priority
         self.queries = queries
+        self.detector_name = detector_name
 
 class BasePatternDetector(ABC):
     """Абстрактный базовый класс для всех детекторов."""

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
+from ..data_analyzer.detectors.base_detector import DetectionResult
 
 
 class DDLStatement(BaseModel):
@@ -44,3 +45,4 @@ class GlobalAnalysisReport(BaseModel):
     """Хранит финальный отчет глобального анализа."""
     top_cost_queries: List[ProfiledQuery]
     analysis_summary: str
+    top_detection: Optional[DetectionResult] = None

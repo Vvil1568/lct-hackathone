@@ -28,5 +28,6 @@ class JoinPatternDetector(BasePatternDetector):
             pattern_name="Frequent Joins",
             message=message,
             priority=10,
-            queries=queries
+            queries=queries,
+            detector_name=self.__class__.__name__
         )]

@@ -1,0 +1,89 @@
+{
+  "JoinPatternDetector": {
+    "description": "Оптимизация путем денормализации часто соединяемых таблиц в единую витрину данных.",
+    "solution_template": {
+      "ddl": [
+        {
+          "statement": "CREATE SCHEMA IF NOT EXISTS {catalog}.optimized;"
+        },
+        {
+          "statement": "CREATE TABLE {catalog}.optimized.fact_denormalized_data (\n  -- Колонки из основной таблицы\n  col_a INT,\n  col_b VARCHAR,\n  -- Колонки из присоединенной таблицы\n  col_c DECIMAL,\n  col_d DATE\n) WITH (\n  format = 'PARQUET',\n  partitioning = ARRAY['day(col_d)']\n);"
+        }
+      ],
+      "migrations": [
+        {
+          "statement": "INSERT INTO {catalog}.optimized.fact_denormalized_data\nSELECT\n  t1.col_a,\n  t1.col_b,\n  t2.col_c,\n  t2.col_d\nFROM {catalog}.{schema}.table1 AS t1\nJOIN {catalog}.{schema}.table2 AS t2 ON t1.key = t2.key;"
+        }
+      ],
+      "queries": [
+        {
+          "queryid": "{highest_cost_query_id}",
+          "query": "SELECT\n  col_a,\n  col_c\nFROM {catalog}.optimized.fact_denormalized_data\nWHERE day(col_d) = '2025-01-01';"
+        }
+      ]
+    }
+  },
+  "PartitioningCandidateDetector": {
+    "description": "Оптимизация большой таблицы путем добавления партиционирования по часто фильтруемым колонкам.",
+    "solution_template": {
+      "ddl": [
+        {
+          "statement": "CREATE SCHEMA IF NOT EXISTS {catalog}.optimized;"
+        },
+        {
+          "statement": "CREATE TABLE {catalog}.optimized.partitioned_table (\n  -- Все колонки из оригинальной таблицы\n  event_date DATE,\n  user_id INT,\n  event_type VARCHAR\n) WITH (\n  format = 'PARQUET',\n  partitioning = ARRAY['event_date', 'event_type']\n);"
+        }
+      ],
+      "migrations": [
+        {
+          "statement": "INSERT INTO {catalog}.optimized.partitioned_table\nSELECT * FROM {catalog}.{schema}.original_table;"
+        }
+      ],
+      "queries": [
+        {
+          "queryid": "{highest_cost_query_id}",
+          "query": "SELECT user_id, count(*)\nFROM {catalog}.optimized.partitioned_table\nWHERE event_date = '2025-01-01' AND event_type = 'login';"
+        }
+      ]
+    }
+  },
+  "CrossJoinDetector": {
+    "description": "Исправление неэффективного CROSS JOIN путем добавления условия соединения.",
+    "solution_template": {
+      "ddl": [],
+      "migrations": [],
+      "queries": [
+        {
+          "queryid": "{highest_cost_query_id}",
+          "query": "-- Оригинальный запрос имел CROSS JOIN. Вот исправленная версия с INNER JOIN:\nSELECT u.name, c.city_name\nFROM {catalog}.{schema}.users AS u\nJOIN {catalog}.{schema}.cities AS c ON u.city_id = c.id;"
+        }
+      ]
+    }
+  },
+  "InefficientAggregationDetector": {
+    "description": "Перенос неагрегатных условий из HAVING в WHERE для повышения производительности.",
+    "solution_template": {
+      "ddl": [],
+      "migrations": [],
+      "queries": [
+        {
+          "queryid": "{highest_cost_query_id}",
+          "query": "-- Условие `city_id = 1` было перенесено из HAVING в WHERE для предварительной фильтрации.\nSELECT city_id, COUNT(*)\nFROM {catalog}.{schema}.users\nWHERE city_id = 1\nGROUP BY city_id\nHAVING COUNT(*) > 10;"
+        }
+      ]
+    }
+  },
+  "SelectStarDetector": {
+    "description": "Замена `SELECT *` на явное перечисление необходимых колонок.",
+    "solution_template": {
+      "ddl": [],
+      "migrations": [],
+      "queries": [
+        {
+          "queryid": "{highest_cost_query_id}",
+          "query": "-- Запрос был переписан, чтобы избежать `SELECT *` и читать только необходимые колонки.\nSELECT\n  col_1,\n  col_5,\n  col_23\nFROM {catalog}.{schema}.wide_table;"
+        }
+      ]
+    }
+  }
+}

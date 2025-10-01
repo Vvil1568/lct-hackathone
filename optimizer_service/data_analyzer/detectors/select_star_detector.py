@@ -26,7 +26,8 @@ class SelectStarDetector(BasePatternDetector):
                                     pattern_name="Select Star on Wide Table",
                                     message=message,
                                     priority=5,
-                                    queries=[query]
+                                    queries=[query],
+                                    detector_name=self.__class__.__name__
                                 ))
                                 break
             except Exception:

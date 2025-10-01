@@ -1,9 +1,11 @@
+import json
 import time
 import sqlglot
 from optimizer_service.models.schemas import TaskRequest, GlobalAnalysisReport
 from optimizer_service.llm.provider import LLMProvider
-from optimizer_service.llm.prompts import MEGA_PROMPT_V2_TEMPLATE
+from optimizer_service.llm.prompts import MEGA_PROMPT_V2_TEMPLATE, MEGA_PROMPT_V3_TEMPLATE
 from optimizer_service.data_analyzer.analysis_module import AnalysisModule
+from optimizer_service.patterns.dispatcher import pattern_dispatcher
 
 MAX_CORRECTION_ATTEMPTS = 2
 
@@ -41,7 +43,11 @@ class OptimizationAgent:
         if not analysis_report.top_cost_queries:
             return {"error": analysis_report.analysis_summary}
 
-        initial_prompt = self._build_global_prompt(analysis_report, task_data)
+        pattern = pattern_dispatcher.get_pattern(analysis_report.top_detection.detector_name)
+        if not pattern:
+            raise ValueError(f"Не найден паттерн для детектора {analysis_report.top_detection.detector_name}")
+
+        initial_prompt = self._build_pattern_prompt(analysis_report, task_data, pattern['solution_template'])
         current_prompt = initial_prompt
 
         for attempt in range(MAX_CORRECTION_ATTEMPTS + 1):
@@ -80,7 +86,7 @@ class OptimizationAgent:
 
         raise Exception("Не удалось сгенерировать валидный SQL после нескольких попыток.")
 
-    def _build_global_prompt(self, report: GlobalAnalysisReport, task_data: TaskRequest) -> str:
+    def _build_pattern_prompt(self, report: GlobalAnalysisReport, task_data: TaskRequest, example: dict) -> str:
         """Собирает отчет и контекст в финальный "стратегический" промпт."""
 
         top_queries_context_list = []
@@ -112,8 +118,11 @@ class OptimizationAgent:
 
         highest_cost_query_id = report.top_cost_queries[0].queryid
 
-        return MEGA_PROMPT_V2_TEMPLATE.format(
+        example_solution_str = json.dumps(example, indent=2)
+
+        return MEGA_PROMPT_V3_TEMPLATE.format(
             analysis_summary=report.analysis_summary,
+            example_solution=example_solution_str,
             top_n=len(report.top_cost_queries),
             top_queries_context=top_queries_context,
             ddl_context=ddl_context,

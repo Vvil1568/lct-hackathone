@@ -24,7 +24,8 @@ class CrossJoinDetector(BasePatternDetector):
                             pattern_name="Cross Join",
                             message=message,
                             priority=8,
-                            queries=[query]
+                            queries=[query],
+                            detector_name=self.__class__.__name__,
                         ))
                         break
             except Exception:

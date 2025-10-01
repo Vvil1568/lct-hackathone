@@ -34,7 +34,8 @@ class InefficientAggregationDetector(BasePatternDetector):
                             pattern_name="Inefficient HAVING Clause",
                             message=message,
                             priority=7,
-                            queries=[query]
+                            queries=[query],
+                            detector_name=self.__class__.__name__,
                         ))
                         break
             except Exception:

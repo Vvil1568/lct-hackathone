@@ -57,5 +57,6 @@ class PartitioningCandidateDetector(BasePatternDetector):
             pattern_name="Partitioning Candidate",
             message=message,
             priority=9,
-            queries=queries
+            queries=queries,
+            detector_name=self.__class__.__name__,
         )]

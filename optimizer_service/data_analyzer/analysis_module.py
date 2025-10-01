@@ -39,11 +39,13 @@ class AnalysisModule:
 
         sorted_detections = sorted(all_detections, key=lambda d: d.priority, reverse=True)
 
+        highest_priority_problem = sorted_detections[0] if sorted_detections else None
         analysis_summary = self._generate_analysis_summary(sorted_detections, top_cost_queries)
 
         return GlobalAnalysisReport(
             top_cost_queries=top_cost_queries,
-            analysis_summary=analysis_summary
+            analysis_summary=analysis_summary,
+            top_detection=highest_priority_problem
         )
 
     def _generate_analysis_summary(self, detections: List[DetectionResult], top_queries) -> str:
@@ -125,28 +127,28 @@ class AnalysisModule:
         try:
             if not ddl_statements or not migration_statements or not query_statements:
                 print("Предупреждение: Недостаточно данных для CTE-валидации. Пропускаю.")
-                return (True, "", "")
+                return True, "", ""
 
             create_table_sql = next(
                 (s["statement"] for s in ddl_statements if "CREATE TABLE" in s["statement"].upper()), None)
             if not create_table_sql:
-                return (False, "Не найден CREATE TABLE в DDL ответа LLM", "")
+                return False, "Не найден CREATE TABLE в DDL ответа LLM", ""
 
             try:
                 create_table_ast = sqlglot.parse_one(create_table_sql, read="trino")
                 column_defs = create_table_ast.this.expressions
                 column_names = [col_def.this.sql() for col_def in column_defs]
             except Exception as e:
-                return (False, f"AST-парсер не смог извлечь колонки из DDL: {e}", create_table_sql)
+                return False, f"AST-парсер не смог извлечь колонки из DDL: {e}", create_table_sql
 
             new_table_name = sqlglot.parse_one(create_table_sql, read="trino").this.this.sql()
             if not new_table_name:
-                return (False, "Не удалось извлечь имя новой таблицы из DDL", create_table_sql)
+                return False, "Не удалось извлечь имя новой таблицы из DDL", create_table_sql
 
             migration_sql = migration_statements[0]["statement"]
             select_part_index = migration_sql.upper().find("SELECT")
             if select_part_index == -1:
-                return (False, "Не найдена SELECT-часть в миграционном скрипте", migration_sql)
+                return False, "Не найдена SELECT-часть в миграционном скрипте", migration_sql
             migration_select = migration_sql[select_part_index:]
 
             if migration_select.strip().endswith(';'):
@@ -174,9 +176,9 @@ class AnalysisModule:
                 cur.execute(explain_query)
 
             print("CTE-валидация SQL прошла успешно.")
-            return (True, "", "")
+            return True, "", ""
 
         except Exception as e:
             error_message = f"Критическая ошибка в процессе CTE-валидации: {e}"
             print(error_message)
-            return (False, error_message, validation_query if 'validation_query' in locals() else "")
+            return False, error_message, validation_query if 'validation_query' in locals() else ""
