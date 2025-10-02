@@ -1,9 +1,9 @@
+from optimizer_service.llm import llm_provider
 from optimizer_service.worker import celery_app
 from optimizer_service.models.schemas import TaskRequest
 from optimizer_service.data_analyzer.trino_connector import TrinoConnector
 from optimizer_service.data_analyzer.analysis_module import AnalysisModule
 from optimizer_service.agent.optimization_agent import OptimizationAgent
-from optimizer_service.llm.provider import llm_provider
 
 
 analyzer_instance = AnalysisModule(connector=None)

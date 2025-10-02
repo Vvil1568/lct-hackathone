@@ -1,8 +1,9 @@
 from typing import List, Dict
 import sqlglot.expressions as exp
 import sqlglot
-from .base_detector import BasePatternDetector, DetectionResult
-from optimizer_service.models.schemas import ProfiledQuery
+from .base_detector import BasePatternDetector
+from optimizer_service.models.schemas import ProfiledQuery, DetectionResult
+
 
 class InefficientAggregationDetector(BasePatternDetector):
     def run(self, queries: List[ProfiledQuery], ddl_map: Dict[str, str]) -> List[DetectionResult]:

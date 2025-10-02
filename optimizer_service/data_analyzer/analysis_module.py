@@ -5,8 +5,7 @@ import sqlglot
 from sqlglot import exp
 
 from optimizer_service.data_analyzer.trino_connector import TrinoConnector
-from optimizer_service.models.schemas import ProfiledQuery, GlobalAnalysisReport, TaskRequest
-from .detectors.base_detector import DetectionResult
+from optimizer_service.models.schemas import ProfiledQuery, GlobalAnalysisReport, TaskRequest, DetectionResult
 from .detectors.cross_join_detector import CrossJoinDetector
 from .detectors.inefficient_agg_detector import InefficientAggregationDetector
 from .detectors.join_detector import JoinPatternDetector

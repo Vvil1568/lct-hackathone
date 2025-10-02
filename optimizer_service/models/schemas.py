@@ -1,6 +1,6 @@
+from typing import List, Dict, Any, Optional
+
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Tuple, Optional
-from ..data_analyzer.detectors.base_detector import DetectionResult
 
 
 class DDLStatement(BaseModel):
@@ -40,6 +40,16 @@ class ProfiledQuery(BaseModel):
     cost: float = 0.0
     explain_plan: Dict[str, Any]
     tables: List[str] = Field(default_factory=list)
+
+class DetectionResult(BaseModel):
+    """
+    Структура для хранения результатов работы детектора.
+    """
+    pattern_name: str
+    message: str
+    priority: int
+    queries: List[ProfiledQuery]
+    detector_name: str
 
 class GlobalAnalysisReport(BaseModel):
     """Хранит финальный отчет глобального анализа."""

@@ -1,8 +1,8 @@
 from typing import List, Dict
 import sqlglot
 from sqlglot import exp
-from .base_detector import BasePatternDetector, DetectionResult
-from optimizer_service.models.schemas import ProfiledQuery
+from .base_detector import BasePatternDetector
+from optimizer_service.models.schemas import ProfiledQuery, DetectionResult
 
 
 class CrossJoinDetector(BasePatternDetector):

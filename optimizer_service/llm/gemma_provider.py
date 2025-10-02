@@ -1,16 +1,17 @@
 import time
 import requests
 import json
+from .base_provider import BaseLLMProvider
 from optimizer_service.core.config import settings
 
-class LLMProvider:
+class GemmaAPIProvider(BaseLLMProvider):
     """
-    Абстракция для взаимодействия с API языковой модели.
-    Скрывает детали реализации HTTP-запросов и обработки ответов.
+    Реализация провайдера для облачного API Google Gemma.
     """
-    def __init__(self, api_key: str, model_name: str = "gemma-3-27b-it"):
+    def __init__(self, api_key: str):
         self.api_key = api_key
-        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+        self.model_name = "gemma-3-27b-it"
+        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent"
 
     def get_completion(self, prompt: str) -> dict:
         """
@@ -21,7 +22,7 @@ class LLMProvider:
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
         max_retries = 3
-        base_delay = 5  # секунд
+        base_delay = 5
 
         for attempt in range(max_retries):
             try:
@@ -55,4 +56,4 @@ class LLMProvider:
 
         raise Exception("Не удалось получить ответ от LLM API после нескольких попыток.")
 
-llm_provider = LLMProvider(api_key=settings.GEMMA_API_KEY)
+llm_provider = GemmaAPIProvider(api_key=settings.GEMMA_API_KEY)

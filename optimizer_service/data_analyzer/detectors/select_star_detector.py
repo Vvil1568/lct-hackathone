@@ -1,7 +1,8 @@
 from typing import List, Dict
 import sqlglot
-from .base_detector import BasePatternDetector, DetectionResult
-from optimizer_service.models.schemas import ProfiledQuery
+from .base_detector import BasePatternDetector
+from optimizer_service.models.schemas import ProfiledQuery, DetectionResult
+
 
 class SelectStarDetector(BasePatternDetector):
     def run(self, queries: List[ProfiledQuery], ddl_map: Dict[str, str]) -> List[DetectionResult]:

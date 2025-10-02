@@ -1,8 +1,9 @@
 import json
 import time
 import sqlglot
+
+from optimizer_service.llm import BaseLLMProvider
 from optimizer_service.models.schemas import TaskRequest, GlobalAnalysisReport
-from optimizer_service.llm.provider import LLMProvider
 from optimizer_service.llm.prompts import MEGA_PROMPT_V2_TEMPLATE, MEGA_PROMPT_V3_TEMPLATE
 from optimizer_service.data_analyzer.analysis_module import AnalysisModule
 from optimizer_service.patterns.dispatcher import pattern_dispatcher
@@ -28,7 +29,7 @@ CORRECTION_PROMPT_TEMPLATE = """
 """
 
 class OptimizationAgent:
-    def __init__(self, llm_provider: LLMProvider, analyzer: AnalysisModule):
+    def __init__(self, llm_provider: BaseLLMProvider, analyzer: AnalysisModule):
         self.llm_provider = llm_provider
         self.analyzer = analyzer
 

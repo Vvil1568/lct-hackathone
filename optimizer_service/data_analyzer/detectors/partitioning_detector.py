@@ -1,8 +1,8 @@
 from collections import Counter
 from typing import List, Dict
 import sqlglot
-from .base_detector import BasePatternDetector, DetectionResult
-from optimizer_service.models.schemas import ProfiledQuery
+from .base_detector import BasePatternDetector
+from optimizer_service.models.schemas import ProfiledQuery, DetectionResult
 
 
 class PartitioningCandidateDetector(BasePatternDetector):

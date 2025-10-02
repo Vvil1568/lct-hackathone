@@ -1,8 +1,8 @@
 from collections import Counter
 from itertools import combinations
 from typing import List, Dict
-from .base_detector import BasePatternDetector, DetectionResult
-from optimizer_service.models.schemas import ProfiledQuery
+from .base_detector import BasePatternDetector
+from optimizer_service.models.schemas import ProfiledQuery, DetectionResult
 
 
 class JoinPatternDetector(BasePatternDetector):
