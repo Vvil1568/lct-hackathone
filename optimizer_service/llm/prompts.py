@@ -138,3 +138,35 @@ MEGA_PROMPT_V3_TEMPLATE = """
 
 Верни ТОЛЬКО финальный JSON-объект без каких-либо объяснений.
 """
+
+MEGA_PROMPT_V4_TEMPLATE = """
+You are a world-class Trino data architect. An automated performance analysis has been performed,
+and your task is to generate a solution based on its findings.
+
+# AUTOMATED ANALYSIS RESULTS & STRATEGY
+{analysis_summary}
+
+# GOLDEN EXAMPLE SOLUTION FROM KNOWLEDGE BASE
+Here is an ideal solution example for this type of problem. Use it as the primary template for the response structure and format:
+```json
+{example_solution}
+```
+
+# CURRENT CONTEXT
+Here are the top-{top_n} most "expensive" queries that caused this problem, sorted by importance:
+---
+{top_queries_context}
+---
+Here are the DDLs for the tables involved in these queries:
+```sql
+{ddl_context}
+```
+
+# YOUR TASK
+Adapt the "GOLDEN EXAMPLE SOLUTION" to the "CURRENT CONTEXT".
+- Replace placeholders like `table1`, `col_a` with actual table and column names from the problematic queries.
+- Ensure the `queryid` in your response matches the ID of the most expensive query: `{highest_cost_query_id}`.
+- Preserve all Trino/Iceberg specifics from the example (`WITH (partitioning = ...)`).
+
+Return ONLY the final JSON object without any explanations or markdown formatting.
+"""

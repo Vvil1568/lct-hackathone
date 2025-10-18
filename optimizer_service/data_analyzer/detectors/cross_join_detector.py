@@ -15,10 +15,9 @@ class CrossJoinDetector(BasePatternDetector):
                 for join_node in parsed.find_all(exp.Join):
                     if join_node.kind and "CROSS" in join_node.kind.upper():
                         message = (
-                            f"В запросе (ID: {query.queryid}) обнаружен CROSS JOIN. "
-                            f"Это крайне неэффективная операция, которая может приводить к экспоненциальному росту данных. "
-                            f"Стратегическая рекомендация: Переписать запрос, добавив явное условие соединения в ON или WHERE, "
-                            f"чтобы избежать декартова произведения."
+                            f"A CROSS JOIN was detected in query (ID: {query.queryid}). "
+                            f"This is a highly inefficient operation that can lead to an exponential increase in data. "
+                            f"Strategic recommendation: Rewrite the query by adding an explicit join condition in the ON or WHERE clause to avoid a Cartesian product."
                         )
                         detections.append(DetectionResult(
                             pattern_name="Cross Join",

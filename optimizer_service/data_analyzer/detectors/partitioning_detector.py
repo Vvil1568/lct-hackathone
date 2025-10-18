@@ -46,11 +46,11 @@ class PartitioningCandidateDetector(BasePatternDetector):
         keys_str = " и ".join([f"'{k}'" for k in top_keys])
 
         message = (
-            f"Обнаружен паттерн 'Непартиционированная Широкая Таблица'. "
-            f"Таблица '{candidate_table}' часто используется в самых дорогих запросах, но не партиционирована. "
-            f"Анализ запросов показывает, что данные часто фильтруются по колонкам {keys_str}. "
-            f"Стратегическая рекомендация: Создать партиционированную копию таблицы '{candidate_table}', "
-            f"используя эти колонки в качестве ключей (например, WITH (partitioning = ARRAY[{', '.join(top_keys)}]))."
+            f"Detected 'Unpartitioned Wide Table' pattern. "
+            f"The table '{candidate_table}' is frequently used in the most expensive queries but is not partitioned. "
+            f"Query analysis shows that data is often filtered by the columns {keys_str}. "
+            f"Strategic recommendation: Create a partitioned copy of the table '{candidate_table}', "
+            f"using these columns as partitioning keys (e.g., WITH (partitioning = ARRAY[{', '.join(top_keys)}]))."
         )
 
         return [DetectionResult(

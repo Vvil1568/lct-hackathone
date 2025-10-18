@@ -26,10 +26,10 @@ class InefficientAggregationDetector(BasePatternDetector):
 
                     if not condition.left.find(exp.AggFunc) and not condition.right.find(exp.AggFunc):
                         message = (
-                            f"В запросе (ID: {query.queryid}) обнаружена неэффективная фильтрация в HAVING. "
-                            f"Условие '{condition.sql()}' не использует агрегацию и может быть перенесено в WHERE для значительного "
-                            f"ускорения, так как фильтрация произойдет до дорогостоящей группировки. "
-                            f"Стратегическая рекомендация: Переписать запрос, переместив неагрегатные условия из HAVING в WHERE."
+                            f"Inefficient filtering in the HAVING clause was detected in query (ID: {query.queryid}). "
+                            f"The condition '{condition.sql()}' does not use an aggregate function and can be moved to the WHERE clause for a significant "
+                            f"performance boost, as filtering will occur before the expensive grouping operation. "
+                            f"Strategic recommendation: Rewrite the query by moving non-aggregate conditions from HAVING to WHERE."
                         )
                         detections.append(DetectionResult(
                             pattern_name="Inefficient HAVING Clause",

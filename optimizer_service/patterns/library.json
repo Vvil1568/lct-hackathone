@@ -1,13 +1,13 @@
 {
   "JoinPatternDetector": {
-    "description": "Оптимизация путем денормализации часто соединяемых таблиц в единую витрину данных.",
+    "description": "Optimization by denormalizing frequently joined tables into a single fact table.",
     "solution_template": {
       "ddl": [
         {
           "statement": "CREATE SCHEMA IF NOT EXISTS {catalog}.optimized;"
         },
         {
-          "statement": "CREATE TABLE {catalog}.optimized.fact_denormalized_data (\n  -- Колонки из основной таблицы\n  col_a INT,\n  col_b VARCHAR,\n  -- Колонки из присоединенной таблицы\n  col_c DECIMAL,\n  col_d DATE\n) WITH (\n  format = 'PARQUET',\n  partitioning = ARRAY['day(col_d)']\n);"
+          "statement": "CREATE TABLE {catalog}.optimized.fact_denormalized_data (\n  -- Columns from the base table\n  col_a INT,\n  col_b VARCHAR,\n  -- Columns from the joined table\n  col_c DECIMAL,\n  col_d DATE\n) WITH (\n  format = 'PARQUET',\n  partitioning = ARRAY['day(col_d)']\n);"
         }
       ],
       "migrations": [
@@ -24,14 +24,14 @@
     }
   },
   "PartitioningCandidateDetector": {
-    "description": "Оптимизация большой таблицы путем добавления партиционирования по часто фильтруемым колонкам.",
+    "description": "Optimization of a large table by adding partitioning on frequently filtered columns.",
     "solution_template": {
       "ddl": [
         {
           "statement": "CREATE SCHEMA IF NOT EXISTS {catalog}.optimized;"
         },
         {
-          "statement": "CREATE TABLE {catalog}.optimized.partitioned_table (\n  -- Все колонки из оригинальной таблицы\n  event_date DATE,\n  user_id INT,\n  event_type VARCHAR\n) WITH (\n  format = 'PARQUET',\n  partitioning = ARRAY['event_date', 'event_type']\n);"
+          "statement": "CREATE TABLE {catalog}.optimized.partitioned_table (\n  -- All columns from the original table\n  event_date DATE,\n  user_id INT,\n  event_type VARCHAR\n) WITH (\n  format = 'PARQUET',\n  partitioning = ARRAY['event_date', 'event_type']\n);"
         }
       ],
       "migrations": [
@@ -48,40 +48,40 @@
     }
   },
   "CrossJoinDetector": {
-    "description": "Исправление неэффективного CROSS JOIN путем добавления условия соединения.",
+    "description": "Fixing an inefficient CROSS JOIN by adding a join condition.",
     "solution_template": {
       "ddl": [],
       "migrations": [],
       "queries": [
         {
           "queryid": "{highest_cost_query_id}",
-          "query": "-- Оригинальный запрос имел CROSS JOIN. Вот исправленная версия с INNER JOIN:\nSELECT u.name, c.city_name\nFROM {catalog}.{schema}.users AS u\nJOIN {catalog}.{schema}.cities AS c ON u.city_id = c.id;"
+          "query": "-- The original query had a CROSS JOIN. Here is the corrected version with an INNER JOIN:\nSELECT u.name, c.city_name\nFROM {catalog}.{schema}.users AS u\nJOIN {catalog}.{schema}.cities AS c ON u.city_id = c.id;"
         }
       ]
     }
   },
   "InefficientAggregationDetector": {
-    "description": "Перенос неагрегатных условий из HAVING в WHERE для повышения производительности.",
+    "description": "Moving non-aggregate conditions from HAVING to WHERE for better performance.",
     "solution_template": {
       "ddl": [],
       "migrations": [],
       "queries": [
         {
           "queryid": "{highest_cost_query_id}",
-          "query": "-- Условие `city_id = 1` было перенесено из HAVING в WHERE для предварительной фильтрации.\nSELECT city_id, COUNT(*)\nFROM {catalog}.{schema}.users\nWHERE city_id = 1\nGROUP BY city_id\nHAVING COUNT(*) > 10;"
+          "query": "-- The condition `city_id = 1` was moved from HAVING to WHERE for pre-filtering.\nSELECT city_id, COUNT(*)\nFROM {catalog}.{schema}.users\nWHERE city_id = 1\nGROUP BY city_id\nHAVING COUNT(*) > 10;"
         }
       ]
     }
   },
   "SelectStarDetector": {
-    "description": "Замена `SELECT *` на явное перечисление необходимых колонок.",
+    "description": "Replacing `SELECT *` with an explicit list of required columns.",
     "solution_template": {
       "ddl": [],
       "migrations": [],
       "queries": [
         {
           "queryid": "{highest_cost_query_id}",
-          "query": "-- Запрос был переписан, чтобы избежать `SELECT *` и читать только необходимые колонки.\nSELECT\n  col_1,\n  col_5,\n  col_23\nFROM {catalog}.{schema}.wide_table;"
+          "query": "-- The query was rewritten to avoid `SELECT *` and read only the necessary columns.\nSELECT\n  col_1,\n  col_5,\n  col_23\nFROM {catalog}.{schema}.wide_table;"
         }
       ]
     }

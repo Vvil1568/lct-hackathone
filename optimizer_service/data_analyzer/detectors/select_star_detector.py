@@ -19,9 +19,9 @@ class SelectStarDetector(BasePatternDetector):
                             num_columns = len(ddl_ast.this.expressions)
                             if num_columns > 20:
                                 message = (
-                                    f"В запросе (ID: {query.queryid}) используется `SELECT *` для чтения из широкой "
-                                    f"таблицы '{table_name}' ({num_columns} колонок). Это приводит к избыточному чтению данных с диска. "
-                                    f"Стратегическая рекомендация: Переписать запрос, явно перечислив только необходимые колонки."
+                                    f"The query (ID: {query.queryid}) uses `SELECT *` to read from the wide "
+                                    f"table '{table_name}' ({num_columns} columns). This leads to excessive data reading from disk. "
+                                    f"Strategic recommendation: Rewrite the query to explicitly list only the necessary columns."
                                 )
                                 detections.append(DetectionResult(
                                     pattern_name="Select Star on Wide Table",

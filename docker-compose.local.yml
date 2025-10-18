@@ -16,9 +16,9 @@ services:
     depends_on:
       - redis
     environment:
-      - LLM_PROVIDER=vllm
-      - VLLM_HOST=vllm
-      - VLLM_PORT=8000
+      - LLM_PROVIDER=llama_cpp
+      - LLAMA_HOST=llama-cpp
+      - LLAMA_PORT=8000
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=rpc://redis:6379/0
   worker:
@@ -28,27 +28,29 @@ services:
       - ./optimizer_service:/app/optimizer_service
     depends_on:
       - redis
+      - api
+      - llama-cpp
     environment:
-      - LLM_PROVIDER=vllm
-      - VLLM_HOST=vllm
-      - VLLM_PORT=8000
+      - LLM_PROVIDER=llama_cpp
+      - LLAMA_HOST=llama-cpp
+      - LLAMA_PORT=8000
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=rpc://redis:6379/0
-  vllm:
-    image: vllm/vllm-openai:latest
+  llama-cpp:
+    image: ghcr.io/ggerganov/llama.cpp:server-cuda
     command:
+      - -m
+      - /models/gemma-3-27b-it-q4_0.gguf
       - --host
       - "0.0.0.0"
-      - --model
-      - "defog/sqlcoder-7b-2"
-      - --dtype
-      - auto
-      - --max-model-len
+      - --port
+      - "8000"
+      - -c
       - "8192"
-      - --gpu-memory-utilization
-      - "0.90"
+      - -ngl
+      - "99"
     volumes:
-      - ./vllm_data:/root/.cache/huggingface
+      - ./models:/models:ro
     ports:
       - "8001:8000"
     deploy:
@@ -58,5 +60,11 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ | grep -q 'slots_idle' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
 volumes:
-  vllm_data:
+  models:

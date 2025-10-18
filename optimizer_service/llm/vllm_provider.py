@@ -9,7 +9,7 @@ class VLLMProvider(BaseLLMProvider):
     Использует OpenAI-совместимый API.
     """
 
-    def __init__(self, host: str = "vllm", port: int = 8000, model_name: str = "casperhansen/sqlcoder-7b-2-awq"):
+    def __init__(self, host: str = "vllm", port: int = 8000, model_name: str = "defog/sqlcoder-7b-2"):
         self.client = OpenAI(
             base_url=f"http://{host}:{port}/v1",
             api_key="dummy-key"
@@ -25,7 +25,6 @@ class VLLMProvider(BaseLLMProvider):
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
-                max_tokens=8192,
             )
 
             raw_text = response.choices[0].message.content

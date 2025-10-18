@@ -4,7 +4,7 @@ import sqlglot
 
 from optimizer_service.llm import BaseLLMProvider
 from optimizer_service.models.schemas import TaskRequest, GlobalAnalysisReport
-from optimizer_service.llm.prompts import MEGA_PROMPT_V2_TEMPLATE, MEGA_PROMPT_V3_TEMPLATE
+from optimizer_service.llm.prompts import MEGA_PROMPT_V2_TEMPLATE, MEGA_PROMPT_V3_TEMPLATE, MEGA_PROMPT_V4_TEMPLATE
 from optimizer_service.data_analyzer.analysis_module import AnalysisModule
 from optimizer_service.patterns.dispatcher import pattern_dispatcher
 
@@ -121,7 +121,7 @@ class OptimizationAgent:
 
         example_solution_str = json.dumps(example, indent=2)
 
-        return MEGA_PROMPT_V3_TEMPLATE.format(
+        return MEGA_PROMPT_V4_TEMPLATE.format(
             analysis_summary=report.analysis_summary,
             example_solution=example_solution_str,
             top_n=len(report.top_cost_queries),

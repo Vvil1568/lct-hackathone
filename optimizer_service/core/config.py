@@ -8,4 +8,6 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = os.environ.get("LLM_PROVIDER", "gemma")
     VLLM_HOST: str = os.environ.get("VLLM_HOST", "localhost")
     VLLM_PORT: int = int(os.environ.get("VLLM_PORT", "8001"))
+    LLAMA_HOST: str = os.environ.get("LLAMA_HOST", "localhost")
+    LLAMA_PORT: int = int(os.environ.get("LLAMA_PORT", "8001"))
 settings = Settings()

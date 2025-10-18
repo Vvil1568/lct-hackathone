@@ -19,9 +19,9 @@ class JoinPatternDetector(BasePatternDetector):
 
         join_str = ", ".join([f"'{t[0][0]}' и '{t[0][1]}'" for t in top_joins])
         message = (
-            f"Обнаружен паттерн 'Частые Соединения'. "
-            f"Таблицы {join_str} постоянно соединяются вместе в самых дорогих запросах. "
-            f"Стратегическая рекомендация: Денормализовать эти таблицы в единую 'витрину данных'."
+            f"Detected 'Frequent Joins' pattern. "
+            f"Tables {join_str} are constantly joined together in the most expensive queries. "
+            f"Strategic recommendation: Denormalize these frequently joined tables into a single, wide 'fact table'."
         )
 
         return [DetectionResult(

@@ -25,6 +25,7 @@ services:
     volumes:
       - ./optimizer_service:/app/optimizer_service
     depends_on:
+      - api
       - redis
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
