@@ -56,3 +56,6 @@ class GlobalAnalysisReport(BaseModel):
     top_cost_queries: List[ProfiledQuery]
     analysis_summary: str
     top_detection: Optional[DetectionResult] = None
+
+class ErrorResponse(BaseModel):
+    error: str

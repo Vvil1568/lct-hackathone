@@ -7,3 +7,5 @@ pydantic-settings
 trino
 sqlglot
 openai
+pytest
+requests

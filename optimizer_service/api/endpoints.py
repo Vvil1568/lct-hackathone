@@ -1,6 +1,12 @@
+from typing import Union
+
+import redis
 from fastapi import APIRouter
 from celery.result import AsyncResult
-from optimizer_service.models.schemas import TaskRequest, TaskResponse, TaskStatus, OptimizationResult
+
+from optimizer_service.core.config import settings
+from optimizer_service.models.schemas import TaskRequest, TaskResponse, TaskStatus, OptimizationResult, ErrorResponse, \
+    TaskLogsResponse
 from optimizer_service.tasks.optimization_task import run_optimization_task
 
 router = APIRouter()
@@ -13,16 +19,23 @@ def create_task(request: TaskRequest):
     task = run_optimization_task.delay(request.dict())
     return TaskResponse(taskid=task.id)
 
-@router.get("/status/{task_id}", response_model=TaskStatus)
+@router.get("/status", response_model=TaskStatus)
 def get_task_status(task_id: str):
     """
     Возвращает статус задачи (RUNNING, DONE, FAILED).
     """
     task_result = AsyncResult(task_id, app=run_optimization_task.app)
-    status = "RUNNING" if task_result.state == "PENDING" or task_result.state == "STARTED" else task_result.state
+    celery_status = task_result.state
+
+    if celery_status in ["PENDING", "STARTED", "RETRY"]:
+        status = "RUNNING"
+    elif celery_status == "SUCCESS":
+        status = "DONE"
+    else:
+        status = "FAILED"
     return TaskStatus(status=status)
 
-@router.get("/getresult/{task_id}", response_model=OptimizationResult)
+@router.get("/getresult", response_model=Union[OptimizationResult, ErrorResponse])
 def get_task_result(task_id: str):
     """
     Возвращает результат выполненной задачи.
