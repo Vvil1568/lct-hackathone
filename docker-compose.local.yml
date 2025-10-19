@@ -21,7 +21,7 @@ services:
       - LLAMA_PORT=8000
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=rpc://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
   worker:
     build: .
     command: celery -A optimizer_service.worker.celery_app worker --loglevel=info
@@ -37,7 +37,7 @@ services:
       - LLAMA_PORT=8000
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=rpc://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
   llama-cpp:
     image: ghcr.io/ggerganov/llama.cpp:server-cuda
     command:

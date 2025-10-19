@@ -17,7 +17,7 @@ services:
       - redis
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=rpc://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - GEMMA_API_KEY=${GEMMA_API_KEY}
   worker:
     build: .
@@ -29,5 +29,5 @@ services:
       - redis
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=rpc://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - GEMMA_API_KEY=${GEMMA_API_KEY}
