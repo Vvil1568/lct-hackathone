@@ -27,7 +27,7 @@ class VLLMProvider(BaseLLMProvider):
                 messages=[
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.1,
+                temperature=0.2,
             )
 
             raw_text = response.choices[0].message.content

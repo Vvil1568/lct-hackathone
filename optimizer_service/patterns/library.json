@@ -1,24 +1,24 @@
 {
-  "JoinPatternDetector": {
-    "description": "Optimization by denormalizing frequently joined tables into a single fact table.",
+"JoinPatternDetector": {
+    "description": "Optimization by denormalizing a classic star schema (a central fact table with multiple dimension tables) into a single, wide fact table.",
     "solution_template": {
       "ddl": [
         {
           "statement": "CREATE SCHEMA IF NOT EXISTS {catalog}.optimized;"
         },
         {
-          "statement": "CREATE TABLE {catalog}.optimized.fact_denormalized_data (\n  -- Columns from the base table\n  col_a INT,\n  col_b VARCHAR,\n  -- Columns from the joined table\n  col_c DECIMAL,\n  col_d DATE\n) WITH (\n  format = 'PARQUET',\n  partitioning = ARRAY['day(col_d)']\n);"
+          "statement": "CREATE TABLE {catalog}.optimized.fact_sales_denormalized (\n  -- Measures from the fact table\n  units_sold BIGINT,\n  revenue DECIMAL(18, 2),\n  -- Denormalized dimensions\n  product_name VARCHAR,\n  category VARCHAR,\n  customer_name VARCHAR,\n  city VARCHAR,\n  full_date DATE,\n  month_name VARCHAR\n) WITH (\n  format = 'PARQUET',\n  partitioning = ARRAY['month_name']\n);"
         }
       ],
       "migrations": [
         {
-          "statement": "INSERT INTO {catalog}.optimized.fact_denormalized_data\nSELECT\n  t1.col_a,\n  t1.col_b,\n  t2.col_c,\n  t2.col_d\nFROM {catalog}.{schema}.table1 AS t1\nJOIN {catalog}.{schema}.table2 AS t2 ON t1.key = t2.key;"
+          "statement": "INSERT INTO {catalog}.optimized.fact_sales_denormalized\nSELECT\n  f.units_sold,\n  f.revenue,\n  p.product_name,\n  p.category,\n  c.customer_name,\n  c.city,\n  d.full_date,\n  d.month_name\nFROM {catalog}.{schema}.sales_facts AS f\nLEFT JOIN {catalog}.{schema}.dim_product AS p ON f.product_key = p.product_key\nLEFT JOIN {catalog}.{schema}.dim_customer AS c ON f.customer_key = c.customer_key\nLEFT JOIN {catalog}.{schema}.dim_date AS d ON f.date_key = d.date_key;"
         }
       ],
       "queries": [
         {
           "queryid": "{highest_cost_query_id}",
-          "query": "SELECT\n  col_a,\n  col_c\nFROM {catalog}.optimized.fact_denormalized_data\nWHERE day(col_d) = '2025-01-01';"
+          "query": "SELECT\n  category,\n  month_name,\n  SUM(revenue) as total_revenue\nFROM {catalog}.optimized.fact_sales_denormalized\nWHERE month_name = '2025-Jan'\nGROUP BY category, month_name;"
         }
       ]
     }

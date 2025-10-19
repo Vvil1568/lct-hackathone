@@ -1,15 +1,14 @@
 import json
 import logging
-import time
 import sqlglot
 
 from optimizer_service.llm import BaseLLMProvider
 from optimizer_service.models.schemas import TaskRequest, GlobalAnalysisReport
-from optimizer_service.llm.prompts import MEGA_PROMPT_V2_TEMPLATE, MEGA_PROMPT_V3_TEMPLATE, MEGA_PROMPT_V4_TEMPLATE
+from optimizer_service.llm.prompts import MEGA_PROMPT_V4_TEMPLATE
 from optimizer_service.data_analyzer.analysis_module import AnalysisModule
 from optimizer_service.patterns.dispatcher import pattern_dispatcher
 
-MAX_CORRECTION_ATTEMPTS = 2
+MAX_CORRECTION_ATTEMPTS = 7
 
 CORRECTION_PROMPT_TEMPLATE = """
 You are a world-class data architect. Your previous attempt to generate SQL code failed the automated validation process.
@@ -17,14 +16,14 @@ You are a world-class data architect. Your previous attempt to generate SQL code
 # ORIGINAL CONTEXT AND TASK
 {original_prompt}
 
+# NEW TASK
+Please, correct this specific error while preserving the overall optimization logic. 
+Regenerate the ENTIRE JSON response in the correct format.
+
 # VALIDATION ERROR
 Your generated SQL code was reviewed, and the following error occurred:
 - **Failing SQL:** `{failing_sql}`
 - **Error Message:** `{error_message}`
-
-# NEW TASK
-Please, correct this specific error while preserving the overall optimization logic. 
-Regenerate the ENTIRE JSON response in the correct format.
 
 Your response must contain ONLY the final JSON object without any explanations or markdown formatting.
 """
@@ -57,10 +56,6 @@ class OptimizationAgent:
         for attempt in range(MAX_CORRECTION_ATTEMPTS + 1):
             logger.info(f"--- Попытка генерации #{attempt + 1} ---")
             logger.info(current_prompt)
-            if attempt > 0:
-                delay = 5 * attempt
-                logger.warning(f"Делаю паузу в {delay} сек. перед повторной попыткой...")
-                time.sleep(delay)
 
             try:
                 llm_response = self.llm_provider.get_completion(current_prompt)

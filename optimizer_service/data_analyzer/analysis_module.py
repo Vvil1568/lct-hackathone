@@ -154,14 +154,25 @@ class AnalysisModule:
                 migration_select = migration_select.strip()[:-1]
 
             final_query_sql = query_statements[0]["query"]
-            final_query_simulated = final_query_sql.replace(new_table_name, "simulated_new_table")
+            final_query_upper = final_query_sql.strip().upper()
+            if final_query_upper.startswith('WITH'):
+                query_body = final_query_sql.strip()[4:]
+                query_body_simulated = query_body.replace(new_table_name, "simulated_new_table")
 
-            validation_query = f"""
-            WITH simulated_new_table ({', '.join(column_names)}) AS (
-                {migration_select}
-            )
-            {final_query_simulated}
-            """
+                validation_query = f"""
+                            WITH simulated_new_table ({', '.join(column_names)}) AS (
+                                {migration_select}
+                            ),
+                            {query_body_simulated}
+                            """
+            else:
+                final_query_simulated = final_query_sql.replace(new_table_name, "simulated_new_table")
+                validation_query = f"""
+                            WITH simulated_new_table ({', '.join(column_names)}) AS (
+                                {migration_select}
+                            )
+                            {final_query_simulated}
+                            """
 
             if validation_query.strip().endswith(';'):
                 validation_query = validation_query.strip()[:-1]
@@ -178,6 +189,6 @@ class AnalysisModule:
             return True, "", ""
 
         except Exception as e:
-            error_message = f"Критическая ошибка в процессе CTE-валидации: {e}"
+            error_message = f"!Critical! SQL Validation Error: {e}"
             logger.info(error_message)
-            return False, error_message, validation_query if 'validation_query' in locals() else ""
+            return False, e, validation_query if 'validation_query' in locals() else ""

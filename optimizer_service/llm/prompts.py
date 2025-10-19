@@ -163,10 +163,11 @@ Here are the DDLs for the tables involved in these queries:
 ```
 
 # YOUR TASK
-Adapt the "GOLDEN EXAMPLE SOLUTION" to the "CURRENT CONTEXT".
-- Replace placeholders like `table1`, `col_a` with actual table and column names from the problematic queries.
-- Ensure the `queryid` in your response matches the ID of the most expensive query: `{highest_cost_query_id}`.
-- Preserve all Trino/Iceberg specifics from the example (`WITH (partitioning = ...)`).
-
+1. Adapt the "GOLDEN EXAMPLE SOLUTION" to the "CURRENT CONTEXT".
+2. **Critical Design Rule:** Analyze the most expensive query (ID: `{highest_cost_query_id}`). Your new denormalized table **must include all columns** from the original tables that are used in its `SELECT`, `WHERE`, and `GROUP BY` clauses.
+3. **Pro Tip for Star Schemas:** When denormalizing a star schema (one central fact table like `store_sales` joined to multiple dimension tables), it is best practice to start your `INSERT` query `FROM` the central fact table and then `JOIN` the dimension tables to it.
+4. Replace placeholders like `table1`, `col_a` with actual table and column names from the problematic queries.
+5. Ensure the `queryid` in your response matches the ID of the most expensive query: `{highest_cost_query_id}`.
+6. Preserve all Trino/Iceberg specifics from the example (`WITH (partitioning = ...)`).
 Return ONLY the final JSON object without any explanations or markdown formatting.
 """
