@@ -1,5 +1,6 @@
 from celery import Celery
 from optimizer_service.core.config import settings
+import optimizer_service.core.logging_config
 
 celery_app = Celery(
     "tasks",

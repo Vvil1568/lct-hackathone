@@ -1,17 +1,22 @@
-from optimizer_service.llm import llm_provider
-from optimizer_service.worker import celery_app
-from optimizer_service.models.schemas import TaskRequest
-from optimizer_service.data_analyzer.trino_connector import TrinoConnector
-from optimizer_service.data_analyzer.analysis_module import AnalysisModule
-from optimizer_service.agent.optimization_agent import OptimizationAgent
+import logging
 
+from optimizer_service.agent.optimization_agent import OptimizationAgent
+from optimizer_service.core.context import current_task_id
+from optimizer_service.data_analyzer.analysis_module import AnalysisModule
+from optimizer_service.data_analyzer.trino_connector import TrinoConnector
+from optimizer_service.llm import llm_provider
+from optimizer_service.models.schemas import TaskRequest
+from optimizer_service.worker import celery_app
+
+logger = logging.getLogger(__name__)
 
 analyzer_instance = AnalysisModule(connector=None)
 agent_instance = OptimizationAgent(llm_provider=llm_provider, analyzer=analyzer_instance)
 
 @celery_app.task(bind=True)
 def run_optimization_task(self, task_data: dict):
-    print(f"Получена задача {self.request.id}. Полный глобальный цикл.")
+    current_task_id.set(self.request.id)
+    logger.info(f"Получена задача {self.request.id}. Полный глобальный цикл.")
     task_request_model = TaskRequest(**task_data)
 
     try:
@@ -20,10 +25,10 @@ def run_optimization_task(self, task_data: dict):
 
         final_result = agent_instance.run_global_optimization(task_data=task_request_model)
 
-        print(f"Задача {self.request.id} полностью и успешно обработана.")
+        logger.info(f"Задача {self.request.id} полностью и успешно обработана.")
         return final_result
 
     except Exception as e:
-        print(f"!!! КРИТИЧЕСКАЯ ОШИБКА в задаче {self.request.id}: {e}")
+        logger.error(f"!!! КРИТИЧЕСКАЯ ОШИБКА в задаче {self.request.id}: {e}")
         self.update_state(state='FAILURE', meta={'exc': str(e)})
         raise

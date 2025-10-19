@@ -1,7 +1,10 @@
+import logging
+
 import requests
 import json
 from .base_provider import BaseLLMProvider
 
+logger = logging.getLogger(__name__)
 
 class LlamaCppProvider(BaseLLMProvider):
     """
@@ -10,7 +13,7 @@ class LlamaCppProvider(BaseLLMProvider):
 
     def __init__(self, host: str = "llama-cpp", port: int = 8000):
         self.api_url = f"http://{host}:{port}/completion"
-        print(f"Инициализирован LlamaCppProvider на {self.api_url}")
+        logger.info(f"Инициализирован LlamaCppProvider на {self.api_url}")
 
     def get_completion(self, prompt: str) -> dict:
         headers = {"Content-Type": "application/json"}
@@ -29,7 +32,7 @@ class LlamaCppProvider(BaseLLMProvider):
 
             response_json = response.json()
             raw_text = response_json.get('content', '')
-
+            raw_text = raw_text.replace("\\'", "'")
             if raw_text.strip().startswith("```json"):
                 json_part = raw_text[raw_text.find("```json") + 7: raw_text.rfind("```")]
             elif "{" in raw_text and "}" in raw_text:
@@ -39,5 +42,5 @@ class LlamaCppProvider(BaseLLMProvider):
 
             return json.loads(json_part)
         except Exception as e:
-            print(f"Ошибка при вызове локального llama-cpp API: {e}")
+            logger.error(f"Ошибка при вызове локального llama-cpp API: {e}")
             raise

@@ -1,7 +1,10 @@
 import json
+import logging
+
 from openai import OpenAI
 from .base_provider import BaseLLMProvider
 
+logger = logging.getLogger(__name__)
 
 class VLLMProvider(BaseLLMProvider):
     """
@@ -15,7 +18,7 @@ class VLLMProvider(BaseLLMProvider):
             api_key="dummy-key"
         )
         self.model_name = model_name
-        print(f"Инициализирован VLLMProvider для модели: {self.model_name} на http://{host}:{port}")
+        logger.info(f"Инициализирован VLLMProvider для модели: {self.model_name} на http://{host}:{port}")
 
     def get_completion(self, prompt: str) -> dict:
         try:
@@ -38,5 +41,5 @@ class VLLMProvider(BaseLLMProvider):
 
             return json.loads(json_part)
         except Exception as e:
-            print(f"Ошибка при вызове локального vLLM API: {e}")
+            logger.error(f"Ошибка при вызове локального vLLM API: {e}")
             raise

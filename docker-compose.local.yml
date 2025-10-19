@@ -19,6 +19,7 @@ services:
       - LLM_PROVIDER=llama_cpp
       - LLAMA_HOST=llama-cpp
       - LLAMA_PORT=8000
+      - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=rpc://redis:6379/0
   worker:
@@ -34,6 +35,7 @@ services:
       - LLM_PROVIDER=llama_cpp
       - LLAMA_HOST=llama-cpp
       - LLAMA_PORT=8000
+      - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=rpc://redis:6379/0
   llama-cpp:

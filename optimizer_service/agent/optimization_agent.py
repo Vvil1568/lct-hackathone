@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 import sqlglot
 
@@ -28,6 +29,8 @@ CORRECTION_PROMPT_TEMPLATE = """
 Твой ответ должен содержать ТОЛЬКО JSON-объект и ничего больше.
 """
 
+logger = logging.getLogger(__name__)
+
 class OptimizationAgent:
     def __init__(self, llm_provider: BaseLLMProvider, analyzer: AnalysisModule):
         self.llm_provider = llm_provider
@@ -37,7 +40,7 @@ class OptimizationAgent:
         """
         Запускает полный пайплайн: Глобальный анализ -> Генерация -> Валидация.
         """
-        print("Агент: Начинаю глобальную оптимизацию...")
+        logger.info("Агент: Начинаю глобальную оптимизацию...")
 
         analysis_report = self.analyzer.perform_global_analysis(task_data)
 
@@ -52,16 +55,15 @@ class OptimizationAgent:
         current_prompt = initial_prompt
 
         for attempt in range(MAX_CORRECTION_ATTEMPTS + 1):
-            print(f"--- Попытка генерации #{attempt + 1} ---")
-            print(current_prompt)
+            logger.info(f"--- Попытка генерации #{attempt + 1} ---")
+            logger.info(current_prompt)
             if attempt > 0:
                 delay = 5 * attempt
-                print(f"Делаю паузу в {delay} сек. перед повторной попыткой...")
+                logger.warning(f"Делаю паузу в {delay} сек. перед повторной попыткой...")
                 time.sleep(delay)
 
             try:
                 llm_response = self.llm_provider.get_completion(current_prompt)
-                print(f"LLM Response: {llm_response}")
 
                 is_valid, error_msg, failing_sql = self.analyzer.validate_sql_list(
                     ddl_statements=llm_response.get("ddl", []),
@@ -70,10 +72,10 @@ class OptimizationAgent:
                 )
 
                 if is_valid:
-                    print("Ответ LLM прошел валидацию!")
+                    logger.info("Ответ LLM прошел валидацию!")
                     return llm_response
                 else:
-                    print("Ответ LLM не прошел валидацию. Готовлю промпт для исправления.")
+                    logger.error("Ответ LLM не прошел валидацию. Готовлю промпт для исправления.")
                     current_prompt = CORRECTION_PROMPT_TEMPLATE.format(
                         original_prompt=initial_prompt,
                         failing_sql=failing_sql,
@@ -81,7 +83,7 @@ class OptimizationAgent:
                     )
 
             except Exception as e:
-                print(f"Ошибка на попытке #{attempt + 1}: {e}")
+                logger.error(f"Ошибка на попытке #{attempt + 1}: {e}")
                 if attempt >= MAX_CORRECTION_ATTEMPTS:
                     raise e
 
@@ -89,7 +91,6 @@ class OptimizationAgent:
 
     def _build_pattern_prompt(self, report: GlobalAnalysisReport, task_data: TaskRequest, example: dict) -> str:
         """Собирает отчет и контекст в финальный "стратегический" промпт."""
-
         top_queries_context_list = []
         for i, q in enumerate(report.top_cost_queries):
             context = (
@@ -103,16 +104,16 @@ class OptimizationAgent:
         relevant_tables = set()
         for q in report.top_cost_queries:
             tables_in_query = q.tables
-            print(tables_in_query)
+            logger.info(tables_in_query)
             for table in tables_in_query:
                 relevant_tables.add(table)
-        print(relevant_tables)
+        logger.info(relevant_tables)
         ddl_context = ""
         try:
             all_ddl_map = {self._extract_table_name_from_ddl(ddl.statement): ddl.statement for ddl in task_data.ddl}
         except Exception:
             all_ddl_map = {}
-        print(all_ddl_map)
+        logger.info(all_ddl_map)
         for table_name in relevant_tables:
             if table_name in all_ddl_map:
                 ddl_context += all_ddl_map[table_name] + "\n"

@@ -1,8 +1,11 @@
+import logging
 import time
 import requests
 import json
 from .base_provider import BaseLLMProvider
 from optimizer_service.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 class GemmaAPIProvider(BaseLLMProvider):
     """
@@ -44,14 +47,14 @@ class GemmaAPIProvider(BaseLLMProvider):
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code == 429:
                     delay = base_delay * (2 ** attempt)
-                    print(f"Получен статус 429 (Too Many Requests). Повторная попытка через {delay} сек...")
+                    logger.error(f"Получен статус 429 (Too Many Requests). Повторная попытка через {delay} сек...")
                     time.sleep(delay)
                     continue
                 else:
-                    print(f"HTTP ошибка при вызове LLM API: {e}")
+                    logger.error(f"HTTP ошибка при вызове LLM API: {e}")
                     raise
             except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError, IndexError) as e:
-                print(f"Ошибка при вызове или парсинге ответа LLM: {e}")
+                logger.error(f"Ошибка при вызове или парсинге ответа LLM: {e}")
                 raise
 
         raise Exception("Не удалось получить ответ от LLM API после нескольких попыток.")

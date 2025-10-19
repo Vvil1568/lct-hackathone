@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import List
 
 import sqlglot
@@ -12,6 +13,7 @@ from .detectors.join_detector import JoinPatternDetector
 from .detectors.partitioning_detector import PartitioningCandidateDetector
 from .detectors.select_star_detector import SelectStarDetector
 
+logger = logging.getLogger(__name__)
 
 class AnalysisModule:
     def __init__(self, connector: TrinoConnector):
@@ -25,7 +27,7 @@ class AnalysisModule:
         ]
 
     def perform_global_analysis(self, task_data: TaskRequest) -> GlobalAnalysisReport:
-        print("Начинаю глобальный анализ с использованием детекторов...")
+        logger.info("Начинаю глобальный анализ с использованием детекторов...")
 
         profiled_queries = self._profile_all_queries(task_data)
         top_cost_queries = self._prioritize_queries(profiled_queries)
@@ -65,7 +67,7 @@ class AnalysisModule:
             cur = conn.cursor()
             for query in task_data.queries:
                 try:
-                    print(f"Профилирую запрос: {query.queryid}")
+                    logger.info(f"Профилирую запрос: {query.queryid}")
                     explain_plan = self._run_explain_with_cursor(cur, query.query)
 
                     parsed_sql = sqlglot.parse_one(query.query, read="trino")
@@ -73,7 +75,6 @@ class AnalysisModule:
                     for table in parsed_sql.find_all(exp.Table):
                         table.set('alias', None)
                         tables.append(table.sql())
-                    print(tables)
                     results.append(
                         ProfiledQuery(
                             queryid=query.queryid,
@@ -85,7 +86,7 @@ class AnalysisModule:
                         )
                     )
                 except Exception as e:
-                    print(f"Не удалось спрофилировать запрос {query.queryid}. Ошибка: {e}. Пропускаю.")
+                    logger.error(f"Не удалось спрофилировать запрос {query.queryid}. Ошибка: {e}. Пропускаю.")
         return results
 
     def _prioritize_queries(self, queries: List[ProfiledQuery], top_n: int = 5) -> List[ProfiledQuery]:
@@ -116,16 +117,15 @@ class AnalysisModule:
         else:
             raise ValueError(f"EXPLAIN не вернул ожидаемую JSON-строку. Получено (тип: {type(result)}): {result}")
 
-    def validate_sql_list(self, ddl_statements: list, migration_statements: list, query_statements: list) -> (
-    bool, str, str):
+    def validate_sql_list(self, ddl_statements: list, migration_statements: list, query_statements: list) -> (bool, str, str):
         """
         Проверяет SQL-запросы с помощью симуляции через CTE. Не требует прав на запись.
         """
-        print("Запускаю CTE-валидацию сгенерированного SQL...")
+        logger.info("Запускаю CTE-валидацию сгенерированного SQL...")
 
         try:
             if not ddl_statements or not migration_statements or not query_statements:
-                print("Предупреждение: Недостаточно данных для CTE-валидации. Пропускаю.")
+                logger.warning("Предупреждение: Недостаточно данных для CTE-валидации. Пропускаю.")
                 return True, "", ""
 
             create_table_sql = next(
@@ -168,8 +168,8 @@ class AnalysisModule:
 
             explain_query = f"EXPLAIN {validation_query}"
 
-            print(f"Выполняю EXPLAIN для симуляции...")
-            print(f"EXPLAIN: {explain_query}")
+            logger.info(f"Выполняю EXPLAIN для симуляции...")
+            logger.info(f"EXPLAIN: {explain_query}")
             with self._connector.connect() as conn:
                 cur = conn.cursor()
                 cur.execute(explain_query)
@@ -179,5 +179,5 @@ class AnalysisModule:
 
         except Exception as e:
             error_message = f"Критическая ошибка в процессе CTE-валидации: {e}"
-            print(error_message)
+            logger.info(error_message)
             return False, error_message, validation_query if 'validation_query' in locals() else ""

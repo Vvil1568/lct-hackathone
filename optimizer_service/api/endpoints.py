@@ -48,3 +48,22 @@ def get_task_result(task_id: str):
             return {"error": "Task failed"}
     else:
         return {"error": "Task is not ready yet"}
+
+
+@router.get("/logs", response_model=TaskLogsResponse)
+def get_task_logs(task_id: str):
+    """
+    Возвращает полный лог выполнения для указанной задачи.
+    """
+    try:
+        redis_client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        log_key = f"task_logs:{task_id}"
+
+        logs = redis_client.lrange(log_key, 0, -1)
+
+        if not logs:
+            return TaskLogsResponse(task_id=task_id, logs=["Логи для данной задачи не найдены."])
+
+        return TaskLogsResponse(task_id=task_id, logs=logs)
+    except Exception as e:
+        return TaskLogsResponse(task_id=task_id, logs=[f"Ошибка при чтении логов: {e}"])

@@ -26,7 +26,7 @@ class SelectStarDetector(BasePatternDetector):
                                 detections.append(DetectionResult(
                                     pattern_name="Select Star on Wide Table",
                                     message=message,
-                                    priority=5,
+                                    priority=6,
                                     queries=[query],
                                     detector_name=self.__class__.__name__
                                 ))

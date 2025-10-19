@@ -1,6 +1,9 @@
+import logging
+
 import trino
 from urllib.parse import urlparse, parse_qs
 
+logger = logging.getLogger(__name__)
 
 class TrinoConnector:
     """
@@ -53,8 +56,8 @@ class TrinoConnector:
                 catalog=self._parsed_params["catalog"],
                 schema=self._parsed_params["schema"],
             )
-            print(f"Успешное подключение к Trino хосту: {self._parsed_params['host']}")
+            logger.info(f"Успешное подключение к Trino хосту: {self._parsed_params['host']}")
             return conn
         except Exception as e:
-            print(f"Ошибка подключения к Trino: {e}")
+            logger.error(f"Ошибка подключения к Trino: {e}")
             raise

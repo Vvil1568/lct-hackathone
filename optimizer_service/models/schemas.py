@@ -59,3 +59,7 @@ class GlobalAnalysisReport(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: str
+
+class TaskLogsResponse(BaseModel):
+    task_id: str
+    logs: List[str]
