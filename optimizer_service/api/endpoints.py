@@ -45,9 +45,10 @@ def get_task_result(task_id: str):
         if task_result.successful():
             return OptimizationResult(**task_result.get())
         else:
-            return {"error": "Task failed"}
+            error_info = str(task_result.info) if task_result.info else "Unknown error"
+            return ErrorResponse(error=f"Task failed: {error_info}")
     else:
-        return {"error": "Task is not ready yet"}
+        return ErrorResponse(error="Task is not ready yet")
 
 
 @router.get("/logs", response_model=TaskLogsResponse)

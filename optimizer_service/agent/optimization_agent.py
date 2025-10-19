@@ -12,21 +12,21 @@ from optimizer_service.patterns.dispatcher import pattern_dispatcher
 MAX_CORRECTION_ATTEMPTS = 2
 
 CORRECTION_PROMPT_TEMPLATE = """
-Ты — ведущий дата-архитектор. Твоя предыдущая попытка сгенерировать SQL-код провалила автоматическую валидацию.
+You are a world-class data architect. Your previous attempt to generate SQL code failed the automated validation process.
 
-# ИСХОДНЫЙ КОНТЕКСТ И ЗАДАЧА
+# ORIGINAL CONTEXT AND TASK
 {original_prompt}
 
-# ОШИБКА ВАЛИДАЦИИ
-Твой сгенерированный SQL-код был проверен, и вот какая ошибка возникла:
-- **Ошибочный SQL:** `{failing_sql}`
-- **Сообщение об ошибке:** `{error_message}`
+# VALIDATION ERROR
+Your generated SQL code was reviewed, and the following error occurred:
+- **Failing SQL:** `{failing_sql}`
+- **Error Message:** `{error_message}`
 
-# НОВАЯ ЗАДАЧА
-Пожалуйста, исправь эту ошибку, сохранив общую логику оптимизации. 
-Перегенерируй ПОЛНЫЙ JSON-ответ в правильном формате.
+# NEW TASK
+Please, correct this specific error while preserving the overall optimization logic. 
+Regenerate the ENTIRE JSON response in the correct format.
 
-Твой ответ должен содержать ТОЛЬКО JSON-объект и ничего больше.
+Your response must contain ONLY the final JSON object without any explanations or markdown formatting.
 """
 
 logger = logging.getLogger(__name__)
