@@ -48,9 +48,9 @@ def test_create_task_endpoint(mock_celery_task):
     """
     Тест 1: Проверяем, что эндпоинт /new работает корректно.
     """
-    print("--- Тестируем POST /api/new ---")
+    print("--- Тестируем POST /new ---")
 
-    response = client.post("/api/new", json=VALID_TASK_REQUEST)
+    response = client.post("/new", json=VALID_TASK_REQUEST)
 
     assert response.status_code == 202
 
@@ -65,12 +65,12 @@ def test_get_status_running_endpoint(mock_async_result):
     """
     Тест 2: Проверяем эндпоинт /status для задачи в процессе выполнения.
     """
-    print("--- Тестируем GET /api/status (RUNNING) ---")
+    print("--- Тестируем GET /status (RUNNING) ---")
 
     mock_instance = mock_async_result.return_value
     mock_instance.state = "PENDING"
 
-    response = client.get("/api/status", params={"task_id": "some-task-id"})
+    response = client.get("/status", params={"task_id": "some-task-id"})
 
     assert response.status_code == 200
     response_json = response.json()
@@ -81,12 +81,12 @@ def test_get_status_done_endpoint(mock_async_result):
     """
     Тест 3: Проверяем эндпоинт /status для завершенной задачи.
     """
-    print("--- Тестируем GET /api/status (DONE) ---")
+    print("--- Тестируем GET /status (DONE) ---")
 
     mock_instance = mock_async_result.return_value
     mock_instance.state = "SUCCESS"
 
-    response = client.get("/api/status", params={"task_id": "some-task-id"})
+    response = client.get("/status", params={"task_id": "some-task-id"})
 
     assert response.status_code == 200
     response_json = response.json()
@@ -98,14 +98,14 @@ def test_get_result_endpoint_success(mock_async_result):
     """
     Тест 4: ГЛАВНЫЙ ТЕСТ. Проверяем, что /getresult возвращает корректную схему.
     """
-    print("--- Тестируем GET /api/getresult (SUCCESS) ---")
+    print("--- Тестируем GET /getresult (SUCCESS) ---")
 
     mock_instance = mock_async_result.return_value
     mock_instance.ready.return_value = True
     mock_instance.successful.return_value = True
     mock_instance.get.return_value = IDEAL_RESULT_PAYLOAD
 
-    response = client.get("/api/getresult", params={"task_id": "some-task-id"})
+    response = client.get("/getresult", params={"task_id": "some-task-id"})
 
     assert response.status_code == 200
 
@@ -116,12 +116,12 @@ def test_get_result_endpoint_not_ready(mock_async_result):
     """
     Тест 5: Проверяем, что /getresult возвращает ошибку, если задача не готова.
     """
-    print("--- Тестируем GET /api/getresult (NOT READY) ---")
+    print("--- Тестируем GET /getresult (NOT READY) ---")
 
     mock_instance = mock_async_result.return_value
     mock_instance.ready.return_value = False
 
-    response = client.get("/api/getresult", params={"task_id": "some-task-id"})
+    response = client.get("/getresult", params={"task_id": "some-task-id"})
 
     assert response.status_code == 200
     assert "error" in response.json()
